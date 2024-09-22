@@ -1,0 +1,4 @@
+Features
+
+get stocks from yfinance
+choose signal strategy
