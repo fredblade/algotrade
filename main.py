@@ -1,28 +1,55 @@
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
+import os.path  # To manage paths
+import sys  # To find out the script name (in argv[0])
 import backtrader as bt
-import yfinance as yf
+import pandas as pd
+from SMAStrat import SMAStrategy
 
-# Download data
-data = yf.download("AAPL", start="2020-01-01", end="2021-01-01")
-print(data.head())
-data = data.dropna()
-
-# SMA = Simple Moving Average
-class SmaCross(bt.SignalStrategy):
-    def __init__(self):
-        # Create SMA for periods of 10 and 30
-        sma1, sma2 = bt.ind.SMA(period=10), bt.ind.SMA(period=30)
-        self.signal = bt.ind.CrossOver(sma1, sma2)
-        self.signal_add(bt.SIGNAL_LONG, self.signal)
-
-    def __repr__(self):
-        return f"SmaCross(sma1_period=10, sma2_period=30, signal={self.signal})"
-
+# PARAMS
+initialCash = 1000
+startDate='2024-01-01'
+endDate='2024-09-01'
+csvPath='data/AAPL.csv'
+# Create a cerebro entity and add a strategy
 cerebro = bt.Cerebro()
-cerebro.addstrategy(SmaCross)
-data = bt.feeds.PandasData(dataname=data)
+cerebro.addstrategy(SMAStrategy)
+
+# Load the CSV using pandas
+df = pd.read_csv(csvPath)
+
+# Remove the dollar signs from price columns and convert to float
+df['Close/Last'] = df['Close/Last'].replace({'\$': ''}, regex=True).astype(float)
+df['Open'] = df['Open'].replace({'\$': ''}, regex=True).astype(float)
+df['High'] = df['High'].replace({'\$': ''}, regex=True).astype(float)
+df['Low'] = df['Low'].replace({'\$': ''}, regex=True).astype(float)
+
+# Convert 'Date' column to datetime with MM/DD/YYYY format
+df['Date'] = pd.to_datetime(df['Date'], format='%m/%d/%Y')
+
+# Set 'Date' as the index
+df.set_index('Date', inplace=True)
+
+# Rename columns to match Backtrader naming conventions
+df.rename(columns={'Close/Last': 'close', 'Volume': 'volume', 'Open': 'open', 'High': 'high', 'Low': 'low'},
+          inplace=True)
+
+#Reverse the order of the dataframe
+df = df.iloc[::-1]
+# Define your data feed
+data = bt.feeds.PandasData(dataname=df, fromdate=pd.Timestamp(startDate), todate=pd.Timestamp(endDate))
+
+# Add the Data Feed to Cerebro
 cerebro.adddata(data)
-result = cerebro.run()
-# cerebro.plot()
-# Print the expanded result
-for strat in result:
-    print(strat)
+
+# Set our desired cash start
+cerebro.broker.setcash(initialCash)
+
+# Print out the starting conditions
+print('Starting Portfolio Value: %.2f' % cerebro.broker.getvalue())
+
+# Run over everything
+cerebro.run()
+cerebro.plot()
+# Print out the final result
+print('Final Portfolio Value: %.2f' % cerebro.broker.getvalue())
