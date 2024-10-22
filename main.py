@@ -1,7 +1,5 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
-import os.path  # To manage paths
-import sys  # To find out the script name (in argv[0])
 import backtrader as bt
 import pandas as pd
 from SMAStrat import SMAStrategy
@@ -11,6 +9,7 @@ initialCash = 1000
 startDate='2024-01-01'
 endDate='2024-09-01'
 csvPath='data/AAPL.csv'
+
 # Create a cerebro entity and add a strategy
 cerebro = bt.Cerebro()
 cerebro.addstrategy(SMAStrategy)
